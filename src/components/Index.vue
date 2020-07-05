@@ -17,30 +17,30 @@
 </template>
 
 <script>
+import db from '../firebase/init'
+
 export default {
   name: 'Index',
   data() {
     return {
-      smoothies: [
-        {
-          title: 'Ninja Brew',
-          slug: 'ninja-brew',
-          ingredients: ['bananas', 'coffee', 'milk'],
-          id: '1',
-        },
-        {
-          title: 'Lipe Morning Brew',
-          slug: 'lipe-morning-brew',
-          ingredients: ['chocolate', 'milk', 'cereal'],
-          id: '2',
-        },
-      ],
+      smoothies: [],
     }
   },
   methods: {
     deleteSmoothie(id){
       this.smoothies = this.smoothies.filter(smoothie => smoothie.id !== id)
     },
+  },
+  created() {
+    db.collection('smoothies').get()
+      .then(snapshot => {
+        snapshot.forEach(doc => {
+          this.smoothies.push({
+            id: doc.id,
+            ...doc.data(),
+          })
+        })
+      })
   },
 }
 </script>
@@ -75,5 +75,9 @@ export default {
   cursor: pointer;
   color: #aaa;
   font-size: 1.4em;
+}
+
+.index .delete:hover {
+  color: rgb(212, 96, 96)
 }
 </style>
