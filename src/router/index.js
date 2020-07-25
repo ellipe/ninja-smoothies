@@ -16,12 +16,17 @@ const routes = [
     name: 'AddSmoothie',
     component: AddSmoothie,
   },
-];
+  {
+    path: '/edit-smoothie/:smoothie_slug',
+    name: 'EditSmoothie',
+    component: AddSmoothie,
+  }
+]
 
 const router = new VueRouter({
   mode: 'history',
   base: process.env.BASE_URL,
   routes,
-});
+})
 
 export default router

@@ -1,15 +1,22 @@
 <template>
   <div class="add-smoothie container">
-    <h2 class="center-align indigo-text">
-      New Smoothie Recipe
+    <div v-if="isLoading" class="progress">
+      <div class="indeterminate pink"></div>
+    </div>
+    <h2 v-if="!isLoading" class="center-align indigo-text">
+      {{ isEditing ? `Editing ${this.smoothie.title}` : 'New Smoothie Recipe' }}
     </h2>
-    <form @submit.prevent="addSmoothie">
+    <form v-if="!isLoading" @submit.prevent="submitSmoothie">
       <div class="field title">
         <label for="title">Smoothie Title</label>
-        <input type="text" name="title" v-model="title" />
+        <input type="text" name="title" v-model="smoothie.title" />
       </div>
       <div>
-        <div v-for="ingredient in ingredients" :key="ingredient" class="chip">
+        <div
+          v-for="ingredient in smoothie.ingredients"
+          :key="ingredient"
+          class="chip"
+        >
           {{ ingredient }}
           <i class="close material-icons" @click="removeIngredient(ingredient)"
             >close</i
@@ -22,12 +29,14 @@
           type="text"
           name="add-ingredient"
           @keydown.tab.prevent="addIngredient"
-          v-model="another"
+          v-model="anotherIngredient"
         />
       </div>
       <div class="field center-align">
         <p v-if="feedback" class="red-text">{{ feedback }}</p>
-        <button class="btn pink">Add Smoothie</button>
+        <button class="btn pink">
+          {{ isEditing ? 'Update Smoothie' : 'Add Smoothie' }}
+        </button>
       </div>
     </form>
   </div>
@@ -41,15 +50,20 @@ export default {
   name: 'AddSmoothie',
   data() {
     return {
-      title: null,
-      ingredients: [],
-      another: null,
+      isLoading: false,
+      isEditing: false,
+      smoothie: {
+        id: null,
+        title: '',
+        ingredients: [],
+      },
+      anotherIngredient: null,
       feedback: null,
     }
   },
   computed: {
     slug: function() {
-      return slugify(this.title, {
+      return slugify(this.smoothie.title, {
         replacement: '-',
         remove: /[$*_+~.()\-:@]/g,
         lower: true,
@@ -58,25 +72,26 @@ export default {
   },
   methods: {
     addIngredient() {
-      if (this.another) {
-        this.ingredients.push(this.another)
-        console.log('DEBUG:::::::::::::::::::::: ingredients', this.ingredients)
-        this.another = null
+      if (this.anotherIngredient) {
+        this.smoothie.ingredients.push(this.anotherIngredient)
+        this.anotherIngredient = null
         this.feedback = null
       } else {
         this.feedback = 'You must enter a value too add an ingredient'
       }
     },
     removeIngredient(ingredient) {
-      this.ingredients = this.ingredients.filter(ing => ing !== ingredient)
+      this.smoothie.ingredients = this.smoothie.ingredients.filter(
+        ing => ing !== ingredient
+      )
     },
     addSmoothie() {
-      if (this.title && this.ingredients.length !== 0) {
+      if (this.smoothie.title && this.smoothie.ingredients.length !== 0) {
         db.collection('smoothies')
           .add({
-            title: this.title,
+            title: this.smoothie.title,
             slug: this.slug,
-            ingredients: this.ingredients,
+            ingredients: this.smoothie.ingredients,
           })
           .then(() => {
             this.$router.push({ name: 'Index' })
@@ -86,9 +101,46 @@ export default {
           })
       } else {
         this.feedback =
-          'You must provide a Title and at least one Ingredient before submitting'
+          'You must provide a title and at least one Ingredient before submitting'
       }
     },
+    updateSmoothie() {
+      if (this.smoothie.title && this.smoothie.ingredients.length !== 0) {
+        db.collection('smoothies')
+          .doc(this.smoothie.id)
+          .update({
+            title: this.smoothie.title,
+            slug: this.slug,
+            ingredients: this.smoothie.ingredients,
+          })
+          .then(() => {
+            this.$router.push({ name: 'Index' })
+          })
+          .catch(err => {
+            console.log(err)
+          })
+      } else {
+        this.feedback =
+          'You must provide a title and at least one Ingredient before submitting'
+      }
+    },
+    submitSmoothie() {
+      this.isEditing ? this.updateSmoothie() : this.addSmoothie()
+    },
+  },
+  created() {
+    this.isLoading = true
+    let ref = db
+      .collection('smoothies')
+      .where('slug', '==', this.$route.params.smoothie_slug || null)
+    ref.get().then(snapshot => {
+      snapshot.forEach(doc => {
+        this.smoothie = doc.data()
+        this.smoothie.id = doc.id
+        this.isEditing = true
+      })
+      this.isLoading = false
+    })
   },
 }
 </script>
